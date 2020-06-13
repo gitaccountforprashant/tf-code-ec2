@@ -34,7 +34,7 @@ resource "aws_instance" "web" {
 }
 
 resource "aws_key_pair" "deployer" {
-  key_name   = "deployer-key"
+  key_name   = var.ssh_key_pair
   public_key = var.pubkey
 }
 
