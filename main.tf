@@ -1,28 +1,40 @@
 provider "aws" {
-}
+  region = "us-east-1"
+  }
 
-module "ec2" {
+resource "aws_instance" "web" {
 
-    source = "./modules/ec2"
-    pci = false
-    environment = "staging"
+  ami   =  var.ami-name
+  # depending on pci is true or false, subnet is selected: pci subnet or npci subnet
+  subnet_id = var.pci ? data.aws_subnet.ec2-pci.id : data.aws_subnet.ec2-npci.id
+  # depending on pci is true or false, security grps are selected: pci sg or npci sg
+  vpc_security_group_ids = split(",", var.pci ? data.aws_security_group.ec2-pci.id : data.aws_security_group.ec2-npci.id)
+  # below are the parameters we should provide depending on our need:
+  instance_type               = var.instance_type
+  ebs_optimized               = var.ebs_optimized
+  disable_api_termination     = var.disable_api_termination
+  # this key pair name will be fetched from aws_key_pair resource created in bottom.
+  key_name                    = aws_key_pair.deployer.key_name
+  monitoring                  = var.monitoring
+  # we can provide ip to our instance depending pci is true or false
+  private_ip                  = var.pci ? var.pci_ip : var.npci_ip
+  source_dest_check           = var.source_dest_check
+  # below is needed if we are giving ipv6 ip to ec2
+  ipv6_address_count          = var.ipv6_address_count < 0 ? null : var.ipv6_address_count
+  ipv6_addresses              = length(var.ipv6_addresses) == 0 ? null : var.ipv6_addresses
+
+
+  # its will take pci if pci variable is true OR npci if pci is false
+  # if envioronment is other than production this tag always false
+  tags = {
     
-    # give ips for your instance
-    pci_ip  = "172.31.80.5"
-    npci_ip = "172.31.48.5"
-
-    app_name = "web"
-    number_of_instances = 1
-    ami-name = "ami-098f16afa9edf40be"
-    instance_type = "t2.micro"
-    ebs_optimized = false
-    disable_api_termination = false
-    ssh_key_pair = "newkey"
-    monitoring = false
-    source_dest_check = true
-    ipv6_address_count = 0
-    # put your local machine pub key here so that it can be added in ec2 authorized key.
-    pubkey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD3F6tyPEFEzV0LX3X8BsXdMsQz1x2cEikKDEY0aIj41qgxMCP/iteneqXSIFZBp5vizPvaoIR3Um9xK7PGoW8giupGn+EPuxIA4cDM4vzOqOkiMPhz5XK0whEjkVzTo4+S0puvDZuwIsdiW9mxhJc7tgBNL0cYlWSYVkz4G/fslNfRPW5mYAM49f4fhtxPb5ok4Q2Lg9dPKVHO/Bgeu5woMc7RY0p1ej6D4CKFE6lymSDJpW0YHX/wqE9+cfEauh7xZcG0q9t2ta6F6fmX0agvpFyZo8aFbXeUBr7osSCJNgvavWbM/06niWrOvYX2xwWdhXmXSrbX8ZbabVohBK41 email@example.com"
+    Name            = "${var.app_name}-${var.environment}-${var.pci ? "pci" : "npci"}" 
+    Environment     = var.environment
+  }
 
 }
 
+resource "aws_key_pair" "deployer" {
+  key_name   = var.ssh_key_pair
+  public_key = var.pubkey
+}

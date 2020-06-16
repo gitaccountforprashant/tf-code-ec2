@@ -70,10 +70,6 @@ variable "npci_ip" {
   type        = string
 }
 
-variable "number_of_instances" {
-  type        = number
-  default = 1
-}
 
 variable "pubkey" {
   type        = string
